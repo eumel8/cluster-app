@@ -1,4 +1,4 @@
-module carbonapp
+module cluster-app
 
 go 1.23.1
 

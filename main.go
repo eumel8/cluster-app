@@ -32,7 +32,11 @@ const (
 
 type Config struct {
 	prometheusURL string
-	metricName    string
+	metricName1    string
+	metricName2    string
+	metricName3    string
+	metricName4    string
+	metricName5    string
 	pullPeriod    time.Duration
 }
 

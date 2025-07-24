@@ -1,0 +1,22 @@
+[ {
+    "name": "up{instance=\"jambo.eumelnet.de\", job=\"blackbox_icmp_v4\"}",
+    "description": "Jambo ICMP"
+  },
+  {
+    "name": "up{instance=\"uucp.gnuu.de\", job=\"blackbox_icmp_v4\"}",
+    "description": "UUCP ICMP"
+  },
+  {
+    "name": "up{instance=\"www.eumel.de\", job=\"blackbox_https\"}",
+    "description": "Eumel HTTPS"
+  },
+  {
+    "name": "up{instance=\"ebooks.eumel.de\", job=\"blackbox_https\"}",
+    "description": "Ebooks HTTPS"
+  },
+  {
+    "name": "up{instance=\"blog.eumel.de\", job=\"blackbox_https\"}",
+    "description": "Blog HTTPS"
+  }
+]
+

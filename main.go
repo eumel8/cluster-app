@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"image/color"
 	"math"
@@ -9,120 +10,71 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/prometheus/client_golang/api"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
-	"github.com/prometheus/common/model"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
+	"github.com/prometheus/client_golang/api"
+	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
 )
 
 const (
 	defaultPullTime = 60
-	nightStart      = 21
-	nightEnd        = 6
-	labelTextSize   = 120 // or 96
+	labelTextSize   = 120
 	ecoMetricLow    = 40
 	ecoMetricHigh   = 80
-	modeFullScreen  = true
+	nightStart      = 21
+	nightEnd        = 6
 )
 
-type Config struct {
-	prometheusURL string
-	metricName1    string
-	metricName2    string
-	metricName3    string
-	metricName4    string
-	metricName5    string
-	pullPeriod    time.Duration
+type Metric struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
-type myTheme struct{}
+type Config struct {
+	PrometheusURL string
+	PullPeriod    time.Duration
+	Metrics       []Metric
+}
 
-var _ fyne.Theme = (*myTheme)(nil)
+type myTheme struct {
+	Config *Config
+}
 
-// collect display size to set font size
-// "github.com/kbinani/screenshot"
-// bounds := screenshot.GetDisplayBounds(0)
-// screenWidth := bounds.Dx()
-// screenHeight := bounds.Dy()
+func loadMetricsFromFile(path string) ([]Metric, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var metrics []Metric
+	err = json.Unmarshal(data, &metrics)
+	return metrics, err
+}
 
-func GetConfig() (Config, error) {
+func GetConfig() (*Config, error) {
 	pullTime, err := strconv.Atoi(os.Getenv("PULL_DURATION"))
 	if err != nil {
 		pullTime = defaultPullTime
 	}
-	return Config{
-		prometheusURL: os.Getenv("PROMETHEUS_URL"),
-		metricName1:   "up{instance=\"jambo.eumelnet.de\", job=\"blackbox_icmp_v4\"}",
-		metricName2:   "up{instance=\"uucp.gnuu.de\", job=\"blackbox_icmp_v4\"}",
-		metricName3:   "up{instance=\"www.eumel.de\", job=\"blackbox_https\"}",
-		metricName4:   "up{instance=\"ebooks.eumel.de\", job=\"blackbox_https\"}",
-		metricName5:   "up{instance=\"blog.eumel.de\", job=\"blackbox_https\"}",
-		pullPeriod:    time.Duration(pullTime) * time.Second,
+
+	metrics, err := loadMetricsFromFile("metrics.json")
+	if err != nil {
+		return nil, fmt.Errorf("error loading metrics: %v", err)
+	}
+
+	return &Config{
+		PrometheusURL: os.Getenv("PROMETHEUS_URL"),
+		PullPeriod:    time.Duration(pullTime) * time.Second,
+		Metrics:       metrics,
 	}, nil
 }
 
-func (m myTheme) Font(style fyne.TextStyle) fyne.Resource {
-	return theme.DefaultTheme().Font(style)
-}
-
-func (m myTheme) Size(name fyne.ThemeSizeName) float32 {
-	return theme.DefaultTheme().Size(name)
-}
-
-func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-	c, err := GetConfig()
+func (c *Config) getMetricValue(metric string) (int, error) {
+	client, err := api.NewClient(api.Config{Address: c.PrometheusURL})
 	if err != nil {
-		fmt.Printf("Error getting config: %v\n", err)
-		return color.Black
-	}
-	clusterColor1, err := c.ClusterColor(c.metricName1)
-	if err != nil {
-		fmt.Printf("Error getting cluster color: %v\n", err)
-		return color.Black
-	}
-	clusterColor2, err := c.ClusterColor(c.metricName2)
-	if err != nil {
-		fmt.Printf("Error getting cluster color: %v\n", err)
-		return color.Black
-	}
-	clusterColor3, err := c.ClusterColor(c.metricName3)
-	if err != nil {
-		fmt.Printf("Error getting cluster color: %v\n", err)
-		return color.Black
-	}
-	clusterColor4, err := c.ClusterColor(c.metricName4)
-	if err != nil {
-		fmt.Printf("Error getting cluster color: %v\n", err)
-		return color.Black
-	}
-	clusterColor5, err := c.ClusterColor(c.metricName5)
-	if err != nil {
-		fmt.Printf("Error getting cluster color: %v\n", err)
-		return color.Black
-	}
-	fmt.Println("ClusterColors: ", clusterColor1, clusterColor2, clusterColor3, clusterColor4, clusterColor5)
-	return clusterColor1
-}
-
-func (m myTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
-	return theme.DefaultTheme().Icon(name)
-}
-
-func (c *Config) GetClusterMetric(metric string) (int, error) {
-	if c.prometheusURL == "" {
-		return 0, fmt.Errorf("PROMETHEUS_URL environment variable is not set")
-	}
-
-	client, err := api.NewClient(api.Config{
-		Address: c.prometheusURL,
-	})
-	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
 		return 0, err
 	}
 
@@ -132,137 +84,107 @@ func (c *Config) GetClusterMetric(metric string) (int, error) {
 
 	result, _, err := v1api.Query(ctx, metric, time.Now())
 	if err != nil {
-		fmt.Printf("Error querying Prometheus: %v\n", err)
 		return 0, err
 	}
 
 	vectorVal, ok := result.(model.Vector)
 	if !ok || len(vectorVal) == 0 {
-		return 0, fmt.Errorf("no data returned")
+		return 0, fmt.Errorf("no data for metric: %s", metric)
 	}
-	clusterMetric := vectorVal[0].Value * 100
-	fmt.Println("clusterMetric: ", clusterMetric)
 
-	// Round the metric to two decimal places
-	roundedMetric := math.Round(float64(clusterMetric)*100) / 100
-
-	formatMetric, err := strconv.Atoi(fmt.Sprintf("%.0f", roundedMetric))
-	if err != nil {
-		fmt.Printf("Error formatting metric: %v\n", err)
-		return 0, err
-	}
-	return formatMetric, nil
+	value := vectorVal[0].Value * 100
+	return int(math.Round(float64(value))), nil
 }
 
-func (c *Config) ClusterColor(metric string) (color.Color, error) {
-
-	// default color grey
-	clusterColor := color.RGBA{125, 125, 125, 255}
-	clusterMetric, err := c.GetClusterMetric(metric)
-
-	if err != nil {
-		fmt.Printf("Error querying Prometheus: %v\n", err)
-		return color.RGBA{}, err
-	}
-
-	if clusterMetric <= ecoMetricLow && clusterMetric > 0 {
-		if isNight() {
-			// dark red/brown
-			clusterColor = color.RGBA{140, 0, 0, 255}
-		} else {
-			// red
-			clusterColor = color.RGBA{255, 0, 0, 255}
-		}
-	} else if clusterMetric > ecoMetricLow && clusterMetric <= ecoMetricHigh {
-		if isNight() {
-			// dark yellow
-			clusterColor = color.RGBA{175, 175, 0, 200}
-		} else {
-			// light yellow
-			clusterColor = color.RGBA{255, 255, 0, 255}
-		}
-	} else {
-		if isNight() {
-			// dark green
-			clusterColor = color.RGBA{0, 190, 0, 255}
-		} else {
-			// light green
-			clusterColor = color.RGBA{0, 255, 0, 255}
-		}
-	}
-	return clusterColor, nil
-}
-
-// find out if it is night to dim the display
 func isNight() bool {
-	now := time.Now()
-	hour := now.Hour()
+	hour := time.Now().Hour()
 	return hour >= nightStart || hour < nightEnd
 }
 
+func (c *Config) colorForMetric(value int) color.Color {
+	isNightTime := isNight()
+
+	switch {
+	case value <= ecoMetricLow && value > 0:
+		if isNightTime {
+			return color.RGBA{140, 0, 0, 255} // dark red
+		}
+		return color.RGBA{255, 0, 0, 255} // red
+
+	case value > ecoMetricLow && value <= ecoMetricHigh:
+		if isNightTime {
+			return color.RGBA{175, 175, 0, 200} // dark yellow
+		}
+		return color.RGBA{255, 255, 0, 255} // yellow
+
+	default:
+		if isNightTime {
+			return color.RGBA{0, 190, 0, 255} // dark green
+		}
+		return color.RGBA{0, 255, 0, 255} // green
+	}
+}
+
+func (m *myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+	return theme.DefaultTheme().Color(name, variant)
+}
+func (m *myTheme) Font(style fyne.TextStyle) fyne.Resource        { return theme.DefaultTheme().Font(style) }
+func (m *myTheme) Size(name fyne.ThemeSizeName) float32           { return theme.DefaultTheme().Size(name) }
+func (m *myTheme) Icon(name fyne.ThemeIconName) fyne.Resource     { return theme.DefaultTheme().Icon(name) }
+
 func main() {
-	c, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
-		fmt.Printf("Error reading config: %v\n", err)
-		return
-	}
-	iconResource, err := fyne.LoadResourceFromURLString("https://raw.githubusercontent.com/eumel8/cluster-app/main/icon.png")
-	if err != nil {
-		fmt.Printf("Failed to load icon", err)
+		fmt.Printf("Config error: %v\n", err)
 		return
 	}
 
-	clusterApp := app.New()
-	clusterApp.SetIcon(iconResource)
-	clusterWindow := clusterApp.NewWindow("Cluster-App")
-	//clusterWindow.SetFullScreen(modeFullScreen)
+	appIcon, _ := fyne.LoadResourceFromURLString("https://raw.githubusercontent.com/eumel8/cluster-app/main/icon.png")
+	a := app.New()
+	a.SetIcon(appIcon)
+	a.Settings().SetTheme(&myTheme{Config: config})
 
-	mainLabel := canvas.NewText("Show the current cluster emission", color.White)
-	mainContent := container.NewVBox(mainLabel)
+	w := a.NewWindow("Cluster-App")
+
+	mainLabel := canvas.NewText("Monitoring Cluster Metrics", color.White)
+	content := container.NewVBox(mainLabel)
+	w.SetContent(content)
+	w.Show()
 
 	go func() {
 		for {
-			clusterApp.Settings().SetTheme(&myTheme{})
-			clusterMetric1, err := c.GetClusterMetric(c.metricName1)
-			if err != nil {
-				fmt.Printf("Error querying Prometheus: %v\n", err)
-			}
-			clusterMetric2, err := c.GetClusterMetric(c.metricName2)
-			if err != nil {
-				fmt.Printf("Error querying Prometheus: %v\n", err)
-			}
-			clusterMetric3, err := c.GetClusterMetric(c.metricName3)
-			if err != nil {
-				fmt.Printf("Error querying Prometheus: %v\n", err)
-			}
-			clusterMetric4, err := c.GetClusterMetric(c.metricName4)
-			if err != nil {
-				fmt.Printf("Error querying Prometheus: %v\n", err)
-			}
-			clusterMetric5, err := c.GetClusterMetric(c.metricName5)
-			if err != nil {
-				fmt.Printf("Error querying Prometheus: %v\n", err)
-			}
-			currentTime := time.Now().Format("02.01.2006 15:04:05")
-			timeLabel := canvas.NewText(currentTime, color.Gray{})
-			timeLabel.Alignment = fyne.TextAlignCenter
-			clusterLabel := canvas.NewText(fmt.Sprintf("%d %d %d %d %d", clusterMetric1, clusterMetric2, clusterMetric3,clusterMetric4,clusterMetric5), color.Black)
-			clusterLabel.TextStyle.Bold = true
-			clusterLabel.TextSize = labelTextSize
-			clusterLabel.Alignment = fyne.TextAlignCenter
-			content := container.NewVBox(timeLabel, clusterLabel)
-			clusterLabel.Refresh()
-			timeLabel.Refresh()
-			clusterWindow.SetContent(content)
-			clusterWindow.Canvas().Refresh(content)
-			clusterWindow.Canvas().SetOnTypedKey(func(keyEvent *fyne.KeyEvent) {
-				if keyEvent.Name == fyne.KeyEscape {
-					clusterApp.Quit()
+			var metricsOutput []string
+			var colorStatus color.Color
+
+			for _, metric := range config.Metrics {
+				val, err := config.getMetricValue(metric.Name)
+				if err != nil {
+					fmt.Printf("Error querying metric %s: %v\n", metric.Description, err)
+					continue
 				}
-			})
-			time.Sleep(c.pullPeriod)
+				metricsOutput = append(metricsOutput, fmt.Sprintf("%s: %d", metric.Description, val))
+				colorStatus = config.colorForMetric(val)
+			}
+
+			timeLabel := canvas.NewText(time.Now().Format("02.01.2006 15:04:05"), color.Gray{})
+			timeLabel.Alignment = fyne.TextAlignCenter
+
+			metricsText := canvas.NewText(fmt.Sprintf("%s", metricsOutput), colorStatus)
+			metricsText.Alignment = fyne.TextAlignCenter
+			metricsText.TextStyle.Bold = true
+			metricsText.TextSize = labelTextSize
+
+			ui := container.NewVBox(timeLabel, metricsText)
+			w.SetContent(ui)
+			time.Sleep(config.PullPeriod)
 		}
 	}()
-	clusterWindow.SetContent(mainContent)
-	clusterWindow.ShowAndRun()
+
+	w.Canvas().SetOnTypedKey(func(e *fyne.KeyEvent) {
+		if e.Name == fyne.KeyEscape {
+			a.Quit()
+		}
+	})
+	a.Run()
 }
+

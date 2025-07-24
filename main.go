@@ -53,7 +53,11 @@ func GetConfig() (Config, error) {
 	}
 	return Config{
 		prometheusURL: os.Getenv("PROMETHEUS_URL"),
-		metricName:    "entsoe_generation_eco",
+		metricName1:   "up{instance=\"jambo.eumelnet.de\", job=\"blackbox_icmp_v4\"}",
+		metricName2:   "up{instance=\"uucp.gnuu.de\", job=\"blackbox_icmp_v4\"}",
+		metricName3:   "up{instance=\"www.eumel.de\", job=\"blackbox_https\"}",
+		metricName4:   "up{instance=\"ebooks.eumel.de\", job=\"blackbox_https\"}",
+		metricName5:   "up{instance=\"blog.eumel.de\", job=\"blackbox_https\"}",
 		pullPeriod:    time.Duration(pullTime) * time.Second,
 	}, nil
 }
@@ -72,19 +76,40 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 		fmt.Printf("Error getting config: %v\n", err)
 		return color.Black
 	}
-	clusterColor, err := c.ClusterColor()
+	clusterColor1, err := c.ClusterColor(c.metricName1)
 	if err != nil {
 		fmt.Printf("Error getting cluster color: %v\n", err)
 		return color.Black
 	}
-	return clusterColor
+	clusterColor2, err := c.ClusterColor(c.metricName2)
+	if err != nil {
+		fmt.Printf("Error getting cluster color: %v\n", err)
+		return color.Black
+	}
+	clusterColor3, err := c.ClusterColor(c.metricName3)
+	if err != nil {
+		fmt.Printf("Error getting cluster color: %v\n", err)
+		return color.Black
+	}
+	clusterColor4, err := c.ClusterColor(c.metricName4)
+	if err != nil {
+		fmt.Printf("Error getting cluster color: %v\n", err)
+		return color.Black
+	}
+	clusterColor5, err := c.ClusterColor(c.metricName5)
+	if err != nil {
+		fmt.Printf("Error getting cluster color: %v\n", err)
+		return color.Black
+	}
+	fmt.Println("ClusterColors: ", clusterColor1, clusterColor2, clusterColor3, clusterColor4, clusterColor5)
+	return clusterColor1
 }
 
 func (m myTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
 	return theme.DefaultTheme().Icon(name)
 }
 
-func (c *Config) GetClusterMetric() (int, error) {
+func (c *Config) GetClusterMetric(metric string) (int, error) {
 	if c.prometheusURL == "" {
 		return 0, fmt.Errorf("PROMETHEUS_URL environment variable is not set")
 	}
@@ -101,7 +126,7 @@ func (c *Config) GetClusterMetric() (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	result, _, err := v1api.Query(ctx, c.metricName, time.Now())
+	result, _, err := v1api.Query(ctx, metric, time.Now())
 	if err != nil {
 		fmt.Printf("Error querying Prometheus: %v\n", err)
 		return 0, err
@@ -125,11 +150,11 @@ func (c *Config) GetClusterMetric() (int, error) {
 	return formatMetric, nil
 }
 
-func (c *Config) ClusterColor() (color.Color, error) {
+func (c *Config) ClusterColor(metric string) (color.Color, error) {
 
 	// default color grey
 	clusterColor := color.RGBA{125, 125, 125, 255}
-	clusterMetric, err := c.GetClusterMetric()
+	clusterMetric, err := c.GetClusterMetric(metric)
 
 	if err != nil {
 		fmt.Printf("Error querying Prometheus: %v\n", err)
@@ -194,14 +219,30 @@ func main() {
 	go func() {
 		for {
 			clusterApp.Settings().SetTheme(&myTheme{})
-			clusterMetric, err := c.GetClusterMetric()
+			clusterMetric1, err := c.GetClusterMetric(c.metricName1)
+			if err != nil {
+				fmt.Printf("Error querying Prometheus: %v\n", err)
+			}
+			clusterMetric2, err := c.GetClusterMetric(c.metricName2)
+			if err != nil {
+				fmt.Printf("Error querying Prometheus: %v\n", err)
+			}
+			clusterMetric3, err := c.GetClusterMetric(c.metricName3)
+			if err != nil {
+				fmt.Printf("Error querying Prometheus: %v\n", err)
+			}
+			clusterMetric4, err := c.GetClusterMetric(c.metricName4)
+			if err != nil {
+				fmt.Printf("Error querying Prometheus: %v\n", err)
+			}
+			clusterMetric5, err := c.GetClusterMetric(c.metricName5)
 			if err != nil {
 				fmt.Printf("Error querying Prometheus: %v\n", err)
 			}
 			currentTime := time.Now().Format("02.01.2006 15:04:05")
 			timeLabel := canvas.NewText(currentTime, color.Gray{})
 			timeLabel.Alignment = fyne.TextAlignCenter
-			clusterLabel := canvas.NewText(fmt.Sprintf("%d ", clusterMetric), color.Black)
+			clusterLabel := canvas.NewText(fmt.Sprintf("%d %d %d %d %d", clusterMetric1, clusterMetric2, clusterMetric3,clusterMetric4,clusterMetric5), color.Black)
 			clusterLabel.TextStyle.Bold = true
 			clusterLabel.TextSize = labelTextSize
 			clusterLabel.Alignment = fyne.TextAlignCenter

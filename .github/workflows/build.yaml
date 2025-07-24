@@ -41,19 +41,19 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       env:
         GHR_PATH: fyne-cross/bin/linux-amd64/cluster-app-amd64.tgz
-        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
         GHR_REPLACE: true
     - name: Release linux-arm64
       uses: fnkr/github-action-ghr@v1
       if: startsWith(github.ref, 'refs/tags/')
       env:
         GHR_PATH: fyne-cross/bin/linux-arm64/cluster-app-arm64.tgz
-        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
         GHR_REPLACE: true
     - name: Release linux-arm
       uses: fnkr/github-action-ghr@v1
       if: startsWith(github.ref, 'refs/tags/')
       env:
         GHR_PATH: fyne-cross/bin/linux-arm/cluster-app-arm.tgz
-        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
         GHR_REPLACE: true

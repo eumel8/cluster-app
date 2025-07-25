@@ -101,9 +101,9 @@ func isNight() bool {
 func (m *myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
 	return theme.DefaultTheme().Color(name, variant)
 }
-func (m *myTheme) Font(style fyne.TextStyle) fyne.Resource        { return theme.DefaultTheme().Font(style) }
-func (m *myTheme) Size(name fyne.ThemeSizeName) float32           { return theme.DefaultTheme().Size(name) }
-func (m *myTheme) Icon(name fyne.ThemeIconName) fyne.Resource     { return theme.DefaultTheme().Icon(name) }
+func (m *myTheme) Font(style fyne.TextStyle) fyne.Resource    { return theme.DefaultTheme().Font(style) }
+func (m *myTheme) Size(name fyne.ThemeSizeName) float32       { return theme.DefaultTheme().Size(name) }
+func (m *myTheme) Icon(name fyne.ThemeIconName) fyne.Resource { return theme.DefaultTheme().Icon(name) }
 
 func main() {
 	config, err := GetConfig()
@@ -191,7 +191,7 @@ func main() {
 
 			stack := container.NewMax(bg, allContent)
 			w.SetContent(stack)
-
+			fmt.Printf("new pull %s", metricLines)
 			time.Sleep(config.PullPeriod)
 		}
 	}()
@@ -204,4 +204,3 @@ func main() {
 
 	a.Run()
 }
-

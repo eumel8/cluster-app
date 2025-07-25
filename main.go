@@ -22,9 +22,6 @@ import (
 
 const (
 	defaultPullTime = 60
-	labelTextSize   = 120
-	ecoMetricLow    = 40
-	ecoMetricHigh   = 80
 	nightStart      = 21
 	nightEnd        = 6
 )
@@ -92,37 +89,13 @@ func (c *Config) getMetricValue(metric string) (int, error) {
 		return 0, fmt.Errorf("no data for metric: %s", metric)
 	}
 
-	value := vectorVal[0].Value * 100
+	value := vectorVal[0].Value * 1
 	return int(math.Round(float64(value))), nil
 }
 
 func isNight() bool {
 	hour := time.Now().Hour()
 	return hour >= nightStart || hour < nightEnd
-}
-
-func (c *Config) colorForMetric(value int) color.Color {
-	isNightTime := isNight()
-
-	switch {
-	case value <= ecoMetricLow && value > 0:
-		if isNightTime {
-			return color.RGBA{140, 0, 0, 255} // dark red
-		}
-		return color.RGBA{255, 0, 0, 255} // red
-
-	case value > ecoMetricLow && value <= ecoMetricHigh:
-		if isNightTime {
-			return color.RGBA{175, 175, 0, 200} // dark yellow
-		}
-		return color.RGBA{255, 255, 0, 255} // yellow
-
-	default:
-		if isNightTime {
-			return color.RGBA{0, 190, 0, 255} // dark green
-		}
-		return color.RGBA{0, 255, 0, 255} // green
-	}
 }
 
 func (m *myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
@@ -145,6 +118,7 @@ func main() {
 	a.Settings().SetTheme(&myTheme{Config: config})
 
 	w := a.NewWindow("Cluster-App")
+	w.Resize(fyne.NewSize(800, 600))
 
 	mainLabel := canvas.NewText("Monitoring Cluster Metrics", color.White)
 	content := container.NewVBox(mainLabel)
@@ -153,29 +127,71 @@ func main() {
 
 	go func() {
 		for {
-			var metricsOutput []string
-			var colorStatus color.Color
+			var (
+				metricLines     []fyne.CanvasObject
+				downCount       int
+				unavailableData bool
+			)
 
 			for _, metric := range config.Metrics {
 				val, err := config.getMetricValue(metric.Name)
-				if err != nil {
-					fmt.Printf("Error querying metric %s: %v\n", metric.Description, err)
-					continue
+
+				var icon *canvas.Text
+				var statusText string
+
+				switch {
+				case err != nil:
+					unavailableData = true
+					icon = canvas.NewText("❓", color.Gray{Y: 180})
+					statusText = fmt.Sprintf("%s: unknown", metric.Description)
+
+				case val == 1:
+					icon = canvas.NewText("✅", color.RGBA{0, 255, 0, 255})
+					statusText = fmt.Sprintf("%s: UP", metric.Description)
+
+				case val == 0:
+					downCount++
+					icon = canvas.NewText("❌", color.RGBA{255, 0, 0, 255})
+					statusText = fmt.Sprintf("%s: DOWN", metric.Description)
+
+				default:
+					icon = canvas.NewText("❓", color.Gray{Y: 180})
+					statusText = fmt.Sprintf("%s: %d", metric.Description, val)
 				}
-				metricsOutput = append(metricsOutput, fmt.Sprintf("%s: %d", metric.Description, val))
-				colorStatus = config.colorForMetric(val)
+
+				icon.TextSize = 32
+				text := canvas.NewText(statusText, color.White)
+				text.TextSize = 24
+				text.Alignment = fyne.TextAlignLeading
+
+				metricLines = append(metricLines, container.NewHBox(icon, text))
 			}
 
-			timeLabel := canvas.NewText(time.Now().Format("02.01.2006 15:04:05"), color.Gray{})
+			var bgColor color.Color
+			switch {
+			case unavailableData:
+				bgColor = color.Black
+			case downCount == 0:
+				bgColor = color.RGBA{0, 120, 0, 255} // green
+			case downCount == 1:
+				bgColor = color.RGBA{255, 215, 0, 255} // yellow
+			default:
+				bgColor = color.RGBA{139, 0, 0, 255} // red
+			}
+
+			bg := canvas.NewRectangle(bgColor)
+			bg.Resize(w.Canvas().Size())
+
+			timeLabel := canvas.NewText(time.Now().Format("02.01.2006 15:04:05"), color.White)
 			timeLabel.Alignment = fyne.TextAlignCenter
+			timeLabel.TextSize = 14
 
-			metricsText := canvas.NewText(fmt.Sprintf("%s", metricsOutput), colorStatus)
-			metricsText.Alignment = fyne.TextAlignCenter
-			metricsText.TextStyle.Bold = true
-			metricsText.TextSize = labelTextSize
+			allContent := container.NewVBox(timeLabel)
+			allContent.Add(container.NewVBox(metricLines...))
 
-			ui := container.NewVBox(timeLabel, metricsText)
-			w.SetContent(ui)
+			stack := container.NewMax(bg, allContent)
+			w.SetContent(stack)
+
 			time.Sleep(config.PullPeriod)
 		}
 	}()
@@ -185,6 +201,7 @@ func main() {
 			a.Quit()
 		}
 	})
+
 	a.Run()
 }
 

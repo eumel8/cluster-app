@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"image/color"
 	"math"
@@ -106,6 +107,10 @@ func (m *myTheme) Size(name fyne.ThemeSizeName) float32       { return theme.Def
 func (m *myTheme) Icon(name fyne.ThemeIconName) fyne.Resource { return theme.DefaultTheme().Icon(name) }
 
 func main() {
+
+	verbose := flag.Bool("v", false, "enable verbose logging")
+	flag.Parse()
+
 	config, err := GetConfig()
 	if err != nil {
 		fmt.Printf("Config error: %v\n", err)
@@ -144,19 +149,31 @@ func main() {
 					unavailableData = true
 					icon = canvas.NewText("❓", color.Gray{Y: 180})
 					statusText = fmt.Sprintf("%s: unknown", metric.Description)
+					if *verbose {
+						fmt.Printf("[%s] %s: error - %v\n", time.Now().Format("15:04:05"), metric.Description, err)
+					}
 
 				case val == 1:
 					icon = canvas.NewText("✅", color.RGBA{0, 255, 0, 255})
 					statusText = fmt.Sprintf("%s: UP", metric.Description)
+					if *verbose {
+						fmt.Printf("[%s] %s: UP (value = %d)\n", time.Now().Format("15:04:05"), metric.Description, val)
+					}
 
 				case val == 0:
 					downCount++
 					icon = canvas.NewText("❌", color.RGBA{255, 0, 0, 255})
 					statusText = fmt.Sprintf("%s: DOWN", metric.Description)
+					if *verbose {
+						fmt.Printf("[%s] %s: DOWN (value = %d)\n", time.Now().Format("15:04:05"), metric.Description, val)
+					}
 
 				default:
 					icon = canvas.NewText("❓", color.Gray{Y: 180})
 					statusText = fmt.Sprintf("%s: %d", metric.Description, val)
+					if *verbose {
+						fmt.Printf("[%s] %s: UNKNOWN (value = %d)\n", time.Now().Format("15:04:05"), metric.Description, val)
+					}
 				}
 
 				icon.TextSize = 32
@@ -191,7 +208,6 @@ func main() {
 
 			stack := container.NewMax(bg, allContent)
 			w.SetContent(stack)
-			fmt.Printf("new pull %s", metricLines)
 			time.Sleep(config.PullPeriod)
 		}
 	}()

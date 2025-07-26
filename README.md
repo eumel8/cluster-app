@@ -9,4 +9,25 @@ point `PROMETHEUS_URL` env to your Prometheus backend, i.e. `http://prometheus.e
 
 start the program and enjoy
 
+## Vulkan driver in WSL
 
+```
+sudo apt install vulkan-tools
+```
+
+## Bitwarden version
+
+In this version the programm expect an item on a Bitwarden service containing username/password for HTTP Basic Auth on
+Prometheus API
+
+```
+bw get item "Prometheus Agent RemoteWrite
+```
+
+## Tips & Tricks
+
+no GPU support in WSL
+
+```
+export LIBGL_ALWAYS_SOFTWARE=1
+```

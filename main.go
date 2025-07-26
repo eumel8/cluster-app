@@ -78,6 +78,7 @@ func (bat *basicAuthTransport) RoundTrip(req *http.Request) (*http.Response, err
 	}
 
 	// Dump response
+	fmt.Printf("HTTP Response requested:\n")
 	respDump, err := httputil.DumpResponse(resp, true)
 	if err == nil {
 		fmt.Printf("📥 HTTP Response:\n%s\n", respDump)

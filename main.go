@@ -10,7 +10,8 @@ import (
 	"image/color"
 	"math"
 	"net/http"
-	"net/http/httputil"
+	// only debug
+	// "net/http/httputil"
 	"os"
 	"os/exec"
 	"strconv"
@@ -72,10 +73,10 @@ func (bat *basicAuthTransport) RoundTrip(req *http.Request) (*http.Response, err
 	//	fmt.Printf("🚀 Outgoing request:\n%s\n", dump)
 	//}
 
-	resp, err := bat.transport().RoundTrip(req)
-	if err != nil {
-		return nil, err
-	}
+	//resp, err := bat.transport().RoundTrip(req)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	// Dump response
 	//fmt.Printf("HTTP Response requested:\n")
@@ -225,7 +226,6 @@ func (m *myTheme) Icon(name fyne.ThemeIconName) fyne.Resource { return theme.Def
 func main() {
 
 	verbose := flag.Bool("v", false, "enable verbose logging")
-	debug := flag.Bool("d", false, "enable debugging")
 	flag.Parse()
 
 	config, err := GetConfig()

@@ -1,13 +1,18 @@
 package main
 
 import (
+	"bytes"
+	"crypto/tls"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"image/color"
 	"math"
+	"net/http"
+	"net/url"
 	"os"
+	"os/exec"
 	"strconv"
 	"time"
 

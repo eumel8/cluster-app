@@ -167,6 +167,7 @@ func (c *Config) getMetricValue(metric string) (int, error) {
 
 	customClient := &http.Client{
 		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},

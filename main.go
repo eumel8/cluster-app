@@ -61,6 +61,18 @@ type BitwardenItem struct {
         } `json:"login"`
 }
 
+func (bat *basicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.SetBasicAuth(bat.Username, bat.Password)
+	return bat.transport().RoundTrip(req)
+}
+
+func (bat *basicAuthTransport) transport() http.RoundTripper {
+	if bat.Transport != nil {
+		return bat.Transport
+	}
+	return http.DefaultTransport
+}
+
 // Get BW_SESSION from env
 func getSessionToken() string {
         return os.Getenv("BW_SESSION")

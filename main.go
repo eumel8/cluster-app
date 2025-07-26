@@ -64,7 +64,8 @@ type BitwardenItem struct {
 
 func (bat *basicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.SetBasicAuth(bat.Username, bat.Password)
-		dump, err := httputil.DumpRequestOut(req, false) // `true` if you want to include the body
+	// dump the request for debugging
+	dump, err := httputil.DumpRequestOut(req, false) // `true` if you want to include the body
 	if err != nil {
 		fmt.Printf("Request dump error: %v\n", err)
 	} else {
@@ -185,6 +186,11 @@ func (c *Config) getMetricValue(metric string) (int, error) {
 	result, _, err := v1api.Query(ctx, metric, time.Now())
 	if err != nil {
 		return 0, err
+	}
+	// dump response for debug
+	dumpResp, err := httputil.DumpResponse(result, true)
+	if err == nil {
+    		fmt.Printf("📥 Response:\n%s\n", dumpResp)
 	}
 
 	vectorVal, ok := result.(model.Vector)

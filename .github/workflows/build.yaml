@@ -2,8 +2,8 @@
 name: Build cluster-app
 on:
   push:
-    tags:        
-      - '*'
+    #tags:        
+    #  - '*'
     #branches:
     #  - main
   #release:
@@ -26,13 +26,13 @@ jobs:
     - name: compile
       run: |
           export PATH=$PATH:~/go/bin
-          fyne-cross linux -output cluster-app -arch=amd64,arm64,arm -debug .
+          fyne-cross linux -output cluster-app-bw -arch=amd64,arm64,arm -debug .
           ls -lR fyne-cross
     - name: package
       run: |
-          cd fyne-cross/bin/linux-arm64/; tar cvfz cluster-app-arm64.tgz cluster-app; cd ../../..
-          cd fyne-cross/bin/linux-arm/; tar cvfz cluster-app-arm.tgz cluster-app; cd ../../..
-          cd fyne-cross/bin/linux-amd64/; tar cvfz cluster-app-amd64.tgz cluster-app; cd ../../..
+          cd fyne-cross/bin/linux-arm64/; tar cvfz cluster-app-arm64.tgz cluster-app-bw; cd ../../..
+          cd fyne-cross/bin/linux-arm/; tar cvfz cluster-app-arm.tgz cluster-app-bw; cd ../../..
+          cd fyne-cross/bin/linux-amd64/; tar cvfz cluster-app-amd64.tgz cluster-app-bw; cd ../../..
           #sudo apt update
           #sudo apt-get -y install bc gcc libgl1-mesa-dev libwayland-dev libx11-dev libxkbcommon-dev xorg-dev xvfb
           #sudo apt-get -y install libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gcc pkg-config libxxf86vm-dev

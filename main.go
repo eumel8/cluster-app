@@ -42,6 +42,35 @@ type myTheme struct {
 	Config *Config
 }
 
+// Struct to hold Bitwarden login fields
+type BitwardenItem struct {
+        Login struct {
+                Username string `json:"username"`
+                Password string `json:"password"`
+        } `json:"login"`
+}
+
+// Get BW_SESSION from env
+func getSessionToken() string {
+        return os.Getenv("BW_SESSION")
+}
+
+// Run Bitwarden CLI to get the item JSON
+func getBitwardenItemJSON(itemName string) ([]byte, error) {
+        cmd := exec.Command("bw", "get", "item", itemName)
+        cmd.Env = append(os.Environ(), "BW_SESSION="+getSessionToken())
+
+        var out bytes.Buffer
+        cmd.Stdout = &out
+
+        err := cmd.Run()
+        if err != nil {
+                return nil, err
+        }
+
+        return out.Bytes(), nil
+}
+
 func loadMetricsFromFile(path string) ([]Metric, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -71,7 +100,50 @@ func GetConfig() (*Config, error) {
 }
 
 func (c *Config) getMetricValue(metric string) (int, error) {
-	client, err := api.NewClient(api.Config{Address: c.PrometheusURL})
+
+	prometheus := c.PrometheusURL
+        // doing bitwarden stuff here to get prometheus credentials
+        itemName := "Prometheus Agent RemoteWrite"
+        jsonData, err := getBitwardenItemJSON(itemName)
+        if err != nil {
+                fmt.Printf("Failed to get item from Bitwarden: %v\n", err)
+        }
+
+        var item BitwardenItem
+        err = json.Unmarshal(jsonData, &item)
+        if err != nil {
+                fmt.Printf("Failed to parse Bitwarden JSON: %v\n", err)
+        }
+
+        username := item.Login.Username
+        password := item.Login.Password
+
+        if os.Getenv("PROMETHEUS_URL") != "" {
+                prometheus = os.Getenv("PROMETHEUS_URL")
+        }
+
+	customClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+		Timeout: 10 * time.Second,
+	}
+
+	// Wrap customClient with basic auth
+	transportWithAuth := basicAuthTransport{
+		Username:  username,
+		Password:  password,
+		Transport: customClient.Transport,
+	}
+
+	// Create Prometheus API client
+	client, err := api.NewClient(api.Config{
+		Address:      prometheus,
+		RoundTripper: &transportWithAuth,
+	})
+
 	if err != nil {
 		return 0, err
 	}

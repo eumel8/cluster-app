@@ -64,25 +64,25 @@ type BitwardenItem struct {
 
 func (bat *basicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.SetBasicAuth(bat.Username, bat.Password)
-	// dump the request for debugging
-	dump, err := httputil.DumpRequestOut(req, false) // `true` if you want to include the body
-	if err != nil {
-		fmt.Printf("Request dump error: %v\n", err)
-	} else {
-		fmt.Printf("🚀 Outgoing request:\n%s\n", dump)
-	}
+	// Dump request
+	//dump, err := httputil.DumpRequestOut(req, false) // `true` if you want to include the body
+	//if err != nil {
+	//	fmt.Printf("Request dump error: %v\n", err)
+	//} else {
+	//	fmt.Printf("🚀 Outgoing request:\n%s\n", dump)
+	//}
 
-		resp, err := bat.transport().RoundTrip(req)
+	resp, err := bat.transport().RoundTrip(req)
 	if err != nil {
 		return nil, err
 	}
 
 	// Dump response
-	fmt.Printf("HTTP Response requested:\n")
-	respDump, err := httputil.DumpResponse(resp, true)
-	if err == nil {
-		fmt.Printf("📥 HTTP Response:\n%s\n", respDump)
-	}
+	//fmt.Printf("HTTP Response requested:\n")
+	//respDump, err := httputil.DumpResponse(resp, true)
+	//if err == nil {
+	//	fmt.Printf("📥 HTTP Response:\n%s\n", respDump)
+	//}
 	return bat.transport().RoundTrip(req)
 }
 
@@ -225,6 +225,7 @@ func (m *myTheme) Icon(name fyne.ThemeIconName) fyne.Resource { return theme.Def
 func main() {
 
 	verbose := flag.Bool("v", false, "enable verbose logging")
+	debug := flag.Bool("d", false, "enable debugging")
 	flag.Parse()
 
 	config, err := GetConfig()

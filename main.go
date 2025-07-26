@@ -10,6 +10,7 @@ import (
 	"image/color"
 	"math"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"os/exec"
 	"strconv"
@@ -63,6 +64,12 @@ type BitwardenItem struct {
 
 func (bat *basicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.SetBasicAuth(bat.Username, bat.Password)
+		dump, err := httputil.DumpRequestOut(req, false) // `true` if you want to include the body
+	if err != nil {
+		fmt.Printf("Request dump error: %v\n", err)
+	} else {
+		fmt.Printf("🚀 Outgoing request:\n%s\n", dump)
+	}
 	return bat.transport().RoundTrip(req)
 }
 
@@ -172,7 +179,7 @@ func (c *Config) getMetricValue(metric string) (int, error) {
 	}
 
 	v1api := v1.NewAPI(client)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	result, _, err := v1api.Query(ctx, metric, time.Now())

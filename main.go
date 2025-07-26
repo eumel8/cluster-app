@@ -10,7 +10,6 @@ import (
 	"image/color"
 	"math"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"strconv"
@@ -45,6 +44,13 @@ type Config struct {
 
 type myTheme struct {
 	Config *Config
+}
+
+// Custom transport to add Basic Auth to each request
+type basicAuthTransport struct {
+	Username  string
+	Password  string
+	Transport http.RoundTripper
 }
 
 // Struct to hold Bitwarden login fields

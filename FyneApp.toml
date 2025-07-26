@@ -2,7 +2,7 @@ Website = "https://www.telekom.com"
 
 [Details]
 Icon = "cluster-app.png"
-Name = "cluster-app"
+Name = "cluster-app-bw"
 ID = "com.telekom.cluster"
 Version = "1.0.0"
 Build = 1

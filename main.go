@@ -71,6 +71,17 @@ func (bat *basicAuthTransport) RoundTrip(req *http.Request) (*http.Response, err
 	} else {
 		fmt.Printf("🚀 Outgoing request:\n%s\n", dump)
 	}
+
+		resp, err := bat.transport().RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Dump response
+	respDump, err := httputil.DumpResponse(resp, true)
+	if err == nil {
+		fmt.Printf("📥 HTTP Response:\n%s\n", respDump)
+	}
 	return bat.transport().RoundTrip(req)
 }
 
@@ -186,11 +197,6 @@ func (c *Config) getMetricValue(metric string) (int, error) {
 	result, _, err := v1api.Query(ctx, metric, time.Now())
 	if err != nil {
 		return 0, err
-	}
-	// dump response for debug
-	dumpResp, err := httputil.DumpResponse(result, true)
-	if err == nil {
-    		fmt.Printf("📥 Response:\n%s\n", dumpResp)
 	}
 
 	vectorVal, ok := result.(model.Vector)

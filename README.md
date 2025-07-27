@@ -5,17 +5,38 @@ metrics are fetched from your existing Prometheus backend and displayed on the c
 
 configure your relevant metrics in [metrics.json](metrics.json), download the binary from the [Release page](https://github.com/eumel8/cluster-app/releases) and start the program in the same directory where the metric.json exists.
 
-point `PROMETHEUS_URL` env to your Prometheus backend, i.e. `http://prometheus.example.com:9090`
+point `PROMETHEUS_URL` env to your Prometheus backend, i.e. 
+
+```
+export PROMETHEUS_URL=http://prometheus.example.com:9090
+```
+
+optional set `PULL_DURATION` to another value in seconds to pull new metrics (default: 60), i.e.
+
+```
+export PULL_DURATION=10
+```
 
 start the program and enjoy
 
-## Vulkan driver in WSL
+## Vulkan driver in WSL (optional)
 
 ```
 sudo apt install vulkan-tools
 ```
 
-## Bitwarden version
+## Prometheus Auth
+
+If you protect your Prometheus endpoint with authentication, you can set env var for username and password:
+
+```
+export PROM_USER=xxxx
+export PROM_PASS=xxxx
+```
+
+## Bitwarden feature
+
+Start the programm with `-bw`.
 
 In this version the programm expect an item on a Bitwarden service containing username/password for HTTP Basic Auth on
 Prometheus API

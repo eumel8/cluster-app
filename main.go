@@ -143,7 +143,7 @@ func GetConfig() (*Config, error) {
 	}, nil
 }
 
-func (c *Config) getMetricValue(metric string, bitwarden bool) (int, error) {
+func (c *Config) getMetricValue(metric string, *bitwarden bool) (int, error) {
 
 	prometheus := c.PrometheusURL
 	username := os.Getenv("PROM_USER")

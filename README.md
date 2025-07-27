@@ -47,8 +47,12 @@ bw get item "Prometheus Agent RemoteWrite
 
 ## Tips & Tricks
 
-no GPU support in WSL
+### no GPU support in WSL
 
 ```
 export LIBGL_ALWAYS_SOFTWARE=1
 ```
+
+### Prometheus TLS connection
+
+hint: we skip SSL verification and allow insecure connection by default, take care.

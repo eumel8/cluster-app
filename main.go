@@ -143,29 +143,9 @@ func GetConfig() (*Config, error) {
 	}, nil
 }
 
-func (c *Config) getMetricValue(metric string, bitwarden bool) (int, error) {
+func (c *Config) getMetricValue(metric string, username string, password string) (int, error) {
 
 	prometheus := c.PrometheusURL
-	username := os.Getenv("PROM_USER")
-	password := os.Getenv("PROM_PASS")
-
-	if bitwarden == true {
-		// doing bitwarden stuff here to get prometheus credentials
-		itemName := "Prometheus Agent RemoteWrite"
-		jsonData, err := getBitwardenItemJSON(itemName)
-		if err != nil {
-			fmt.Printf("Failed to get item from Bitwarden: %v\n", err)
-		}
-
-		var item BitwardenItem
-		err = json.Unmarshal(jsonData, &item)
-		if err != nil {
-			fmt.Printf("Failed to parse Bitwarden JSON: %v\n", err)
-		}
-
-		username = item.Login.Username
-		password = item.Login.Password
-	}
 
 	customClient := &http.Client{
 		Transport: &http.Transport{
@@ -227,7 +207,7 @@ func (m *myTheme) Icon(name fyne.ThemeIconName) fyne.Resource { return theme.Def
 func main() {
 
 	verbose := flag.Bool("v", false, "enable verbose logging")
-	bitwarden := flag.Bool("bwd", false, "enable Bitwarden password store")
+	bitwarden := flag.Bool("bw", false, "enable Bitwarden password store")
 	flag.Parse()
 
 	config, err := GetConfig()
@@ -249,6 +229,27 @@ func main() {
 	w.SetContent(content)
 	w.Show()
 
+	username := os.Getenv("PROM_USER")
+	password := os.Getenv("PROM_PASS")
+
+	if *bitwarden == true {
+		// doing bitwarden stuff here to get prometheus credentials
+		itemName := "Prometheus Agent RemoteWrite"
+		jsonData, err := getBitwardenItemJSON(itemName)
+		if err != nil {
+			fmt.Printf("Failed to get item from Bitwarden: %v\n", err)
+		}
+
+		var item BitwardenItem
+		err = json.Unmarshal(jsonData, &item)
+		if err != nil {
+			fmt.Printf("Failed to parse Bitwarden JSON: %v\n", err)
+		}
+
+		username = item.Login.Username
+		password = item.Login.Password
+	}
+
 	go func() {
 		for {
 			var (
@@ -258,7 +259,7 @@ func main() {
 			)
 
 			for _, metric := range config.Metrics {
-				val, err := config.getMetricValue(metric.Name, *bitwarden)
+				val, err := config.getMetricValue(metric.Name, username, password)
 
 				var icon *canvas.Text
 				var statusText string

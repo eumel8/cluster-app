@@ -55,4 +55,10 @@ export LIBGL_ALWAYS_SOFTWARE=1
 
 ### Prometheus TLS connection
 
-hint: we skip SSL verification and allow insecure connection by default, take care.
+we skip SSL verification and allow insecure connection by default, take care.
+
+### Proxy Settings
+
+we respect env vars like `http_proxy` or `https_proxy` for Prometheus endpoint connection from your computer.
+
+

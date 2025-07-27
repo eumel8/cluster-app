@@ -1,4 +1,4 @@
-module cluster-app-bw
+module cluster-app
 
 go 1.23.1
 

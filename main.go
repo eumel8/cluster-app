@@ -143,13 +143,13 @@ func GetConfig() (*Config, error) {
 	}, nil
 }
 
-func (c *Config) getMetricValue(metric string, *bitwarden bool) (int, error) {
+func (c *Config) getMetricValue(metric string, bitwarden bool) (int, error) {
 
 	prometheus := c.PrometheusURL
 	username := os.Getenv("PROM_USER")
 	password := os.Getenv("PROM_PASS")
 
-	if *bitwarden == true {
+	if bitwarden == true {
 		// doing bitwarden stuff here to get prometheus credentials
 		itemName := "Prometheus Agent RemoteWrite"
 		jsonData, err := getBitwardenItemJSON(itemName)

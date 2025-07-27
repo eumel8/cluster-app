@@ -1,13 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"image/color"
 	"math"
+	"net/http"
+	// debug
+	// "net/http/httputil"
 	"os"
+	"os/exec"
 	"strconv"
 	"time"
 
@@ -42,6 +48,73 @@ type myTheme struct {
 	Config *Config
 }
 
+// Custom transport to add Basic Auth to each request
+type basicAuthTransport struct {
+	Username  string
+	Password  string
+	Transport http.RoundTripper
+}
+
+// Struct to hold Bitwarden login fields
+type BitwardenItem struct {
+	Login struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	} `json:"login"`
+}
+
+func (bat *basicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.SetBasicAuth(bat.Username, bat.Password)
+	// Dump request
+	//dump, err := httputil.DumpRequestOut(req, false) // `true` if you want to include the body
+	//if err != nil {
+	//	fmt.Printf("Request dump error: %v\n", err)
+	//} else {
+	//	fmt.Printf("🚀 Outgoing request:\n%s\n", dump)
+	//}
+
+	//resp, err := bat.transport().RoundTrip(req)
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	// Dump response
+	//fmt.Printf("HTTP Response requested:\n")
+	//respDump, err := httputil.DumpResponse(resp, true)
+	//if err == nil {
+	//	fmt.Printf("📥 HTTP Response:\n%s\n", respDump)
+	//}
+	return bat.transport().RoundTrip(req)
+}
+
+func (bat *basicAuthTransport) transport() http.RoundTripper {
+	if bat.Transport != nil {
+		return bat.Transport
+	}
+	return http.DefaultTransport
+}
+
+// Get BW_SESSION from env
+func getSessionToken() string {
+	return os.Getenv("BW_SESSION")
+}
+
+// Run Bitwarden CLI to get the item JSON
+func getBitwardenItemJSON(itemName string) ([]byte, error) {
+	cmd := exec.Command("bw", "get", "item", itemName)
+	cmd.Env = append(os.Environ(), "BW_SESSION="+getSessionToken())
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	return out.Bytes(), nil
+}
+
 func loadMetricsFromFile(path string) ([]Metric, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -70,14 +143,39 @@ func GetConfig() (*Config, error) {
 	}, nil
 }
 
-func (c *Config) getMetricValue(metric string) (int, error) {
-	client, err := api.NewClient(api.Config{Address: c.PrometheusURL})
+func (c *Config) getMetricValue(metric string, username string, password string) (int, error) {
+
+	prometheus := c.PrometheusURL
+
+	customClient := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+		Timeout: 10 * time.Second,
+	}
+
+	// Wrap customClient with basic auth
+	transportWithAuth := basicAuthTransport{
+		Username:  username,
+		Password:  password,
+		Transport: customClient.Transport,
+	}
+
+	// Create Prometheus API client
+	client, err := api.NewClient(api.Config{
+		Address:      prometheus,
+		RoundTripper: &transportWithAuth,
+	})
+
 	if err != nil {
 		return 0, err
 	}
 
 	v1api := v1.NewAPI(client)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	result, _, err := v1api.Query(ctx, metric, time.Now())
@@ -109,6 +207,7 @@ func (m *myTheme) Icon(name fyne.ThemeIconName) fyne.Resource { return theme.Def
 func main() {
 
 	verbose := flag.Bool("v", false, "enable verbose logging")
+	bitwarden := flag.Bool("bw", false, "enable Bitwarden password store")
 	flag.Parse()
 
 	config, err := GetConfig()
@@ -130,6 +229,27 @@ func main() {
 	w.SetContent(content)
 	w.Show()
 
+	username := os.Getenv("PROM_USER")
+	password := os.Getenv("PROM_PASS")
+
+	if *bitwarden == true {
+		// doing bitwarden stuff here to get prometheus credentials
+		itemName := "Prometheus Agent RemoteWrite"
+		jsonData, err := getBitwardenItemJSON(itemName)
+		if err != nil {
+			fmt.Printf("Failed to get item from Bitwarden: %v\n", err)
+		}
+
+		var item BitwardenItem
+		err = json.Unmarshal(jsonData, &item)
+		if err != nil {
+			fmt.Printf("Failed to parse Bitwarden JSON: %v\n", err)
+		}
+
+		username = item.Login.Username
+		password = item.Login.Password
+	}
+
 	go func() {
 		for {
 			var (
@@ -139,7 +259,7 @@ func main() {
 			)
 
 			for _, metric := range config.Metrics {
-				val, err := config.getMetricValue(metric.Name)
+				val, err := config.getMetricValue(metric.Name, username, password)
 
 				var icon *canvas.Text
 				var statusText string

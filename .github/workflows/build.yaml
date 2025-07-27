@@ -4,10 +4,10 @@ on:
   push:
     tags:        
       - '*'
-    #branches:
-    #  - main
-  #release:
-  #  types: [created]
+    branches:
+      - dev
+  release:
+    types: [created]
 
 jobs:
   fyne-cross-and-release:

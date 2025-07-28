@@ -231,8 +231,9 @@ func main() {
 
 	username := os.Getenv("PROM_USER")
 	password := os.Getenv("PROM_PASS")
+	clcBW := os.Getenv("CLUSTERCHECK_BW")
 
-	if *bitwarden == true {
+	if *bitwarden == true || clcBW != ""{
 		// doing bitwarden stuff here to get prometheus credentials
 		itemName := "Prometheus Agent RemoteWrite"
 		jsonData, err := getBitwardenItemJSON(itemName)
@@ -298,7 +299,7 @@ func main() {
 
 				icon.TextSize = 32
 				text := canvas.NewText(statusText, color.White)
-				text.TextSize = 24
+				text.TextSize = 18
 				text.Alignment = fyne.TextAlignLeading
 
 				metricLines = append(metricLines, container.NewHBox(icon, text))

@@ -36,7 +36,11 @@ export PROM_PASS=xxxx
 
 ## Bitwarden feature
 
-Start the programm with `-bw`.
+Start the programm with `-bw` or set env var
+
+```
+export CLUSTERCHECK_BW=1
+```
 
 In this version the programm expect an item on a Bitwarden service containing username/password for HTTP Basic Auth on
 Prometheus API

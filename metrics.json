@@ -1,22 +1,21 @@
 [ {
-    "name": "up{instance=\"jambo.eumelnet.de\", job=\"blackbox_icmp_v4\"}",
+    "name": "probe_success{job=\"blackbox_icmp_v4\",instance=\"jambo.eumelnet.de\"}",
     "description": "Jambo ICMP"
   },
   {
-    "name": "up{instance=\"uucp.gnuu.de\", job=\"blackbox_icmp_v4\"}",
+    "name": "probe_success{job=\"blackbox_icmp_v4\",instance=\"uucp.gnuu.de\"}",
     "description": "UUCP ICMP"
   },
   {
-    "name": "up{instance=\"www.eumel.de\", job=\"blackbox_https\"}",
+    "name": "probe_success{job=\"blackbox_https\", instance=\"www.eumel.de\"}",
     "description": "Eumel HTTPS"
   },
   {
-    "name": "up{instance=\"ebooks.eumel.de\", job=\"blackbox_https\"}",
+    "name": "probe_success{job=\"blackbox_https\", instance=\"ebooks.eumel.de\"}",
     "description": "Ebooks HTTPS"
   },
   {
-    "name": "up{instance=\"blog.eumel.de\", job=\"blackbox_https\"}",
+    "name": "probe_success{job=\"blackbox_https\", instance=\"blog.eumel.de\"}",
     "description": "Blog HTTPS"
   }
 ]
-

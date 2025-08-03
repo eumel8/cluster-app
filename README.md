@@ -3,6 +3,10 @@
 a small program to run on your Linux desktop or WSL to observe the status from your very important services.
 metrics are fetched from your existing Prometheus backend and displayed on the cluster-app window.
 
+<img src="cluster-app-1.png" alt="screenshot" width="680"/>
+
+<img src="cluster-app-2.png" alt="screenshot" width="680"/>
+
 configure your relevant metrics in [metrics.json](metrics.json), download the binary from the [Release page](https://github.com/eumel8/cluster-app/releases) and start the program in the same directory where the metric.json exists.
 
 point `PROMETHEUS_URL` env to your Prometheus backend, i.e. 
